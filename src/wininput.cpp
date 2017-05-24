@@ -67,13 +67,13 @@ namespace {
 		for (auto& seq : keyEventSeqs) {
 			input::KeyData& next = seq.evts[seq.pos];
 
-			if (data.vkCode == next.vkCode && (!seq.strict ||
+			if (data.code == next.code && (!seq.strict ||
 				(data.ctrl == next.ctrl && data.shift == next.shift && data.alt == next.alt))) {
 				// increment pos on successful match
-				_D("Key Seq " << seq.id << " matched: " << data.vkCode << std::endl);
+				_D("Key Seq " << seq.id << " matched: " << data.code << std::endl);
 				++seq.pos;
 
-				if (seq.evts[seq.pos].vkCode == 0) {
+				if (seq.evts[seq.pos].code == 0) {
 					// complete sequence matched
 					stop = seq.handler();
 					seq.pos = 0;
@@ -269,32 +269,32 @@ namespace input {
 		return false;
 	}
 
-	bool onKeyEvent(KeyData *data, bool strict, event_handler_fn fn, int *handlerId) {
+	bool addKeySequence(KeyData *data, bool strict, event_handler_fn fn, int *sequenceId) {
 		bool res = setupThread();
-		int seqId = ++seqCounter;
-		if (handlerId) *handlerId = seqId;
-		KeySequence seq = { seqId, 0, strict, data, fn };
+		int sid = ++seqCounter;
+		if (sequenceId) *sequenceId = sid;
+		KeySequence seq = { sid, 0, strict, data, fn };
 
 		std::lock_guard<std::mutex> lock(keyEventSeqsMutex);
 		keyEventSeqs.push_back(seq);
 		return res;
 	}
 
-	bool onMouseEvent(MouseData *data, unsigned tolerance, event_handler_fn fn, int *handlerId) {
+	bool addMouseSequence(MouseData *data, unsigned tolerance, event_handler_fn fn, int *sequenceId) {
 		bool res = setupThread();
-		int seqId = ++seqCounter;
-		if (handlerId) *handlerId = seqId;
-		MouseSequence seq = { seqId, 0, tolerance, data, fn };
+		int sid = ++seqCounter;
+		if (sequenceId) *sequenceId = sid;
+		MouseSequence seq = { sid, 0, tolerance, data, fn };
 
 		std::lock_guard<std::mutex> lock(mouseEventSeqsMutex);
 		mouseEventSeqs.push_back(seq);
 		return res;
 	}
 
-	bool removeKeyEventHandler(int handlerId) {
+	bool removeKeySequence(int sequenceId) {
 		std::lock_guard<std::mutex> lock(keyEventSeqsMutex);
 		for (auto it = keyEventSeqs.begin(); it != keyEventSeqs.end(); ++it) {
-			if (handlerId == it->id) {
+			if (sequenceId == it->id) {
 				keyEventSeqs.erase(it);
 				return true;
 			}
@@ -302,10 +302,10 @@ namespace input {
 		return false;
 	}
 
-	bool removeMouseEventHandler(int handlerId) {
+	bool removeMouseSequence(int sequenceId) {
 		std::lock_guard<std::mutex> lock(mouseEventSeqsMutex);
 		for (auto it = mouseEventSeqs.begin(); it != mouseEventSeqs.end(); ++it) {
-			if (handlerId == it->id) {
+			if (sequenceId == it->id) {
 				mouseEventSeqs.erase(it);
 				return true;
 			}

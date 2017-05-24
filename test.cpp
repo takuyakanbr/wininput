@@ -14,7 +14,7 @@ namespace {
 
 	bool keyHandler(input::KeyData& data) {
 		if (data.type == INPUT_TYPE_KEYDOWN)
-			std::cout << "K: " << data.vkCode << std::endl;
+			std::cout << "K: " << data.code << std::endl;
 		return false;
 	}
 
@@ -50,8 +50,8 @@ int main() {
 	seq[2] = { 0x4C, false, false, false, 3 };
 	seq[3] = { 0x4C, false, false, false, 3 };
 	seq[4] = { 0x4F, false, false, false, 3 };
-	int handlerId;
-	input::onKeyEvent(seq, true, seqMatchHandler, &handlerId);
+	int seqId;
+	input::addKeySequence(seq, true, seqMatchHandler, &seqId);
 
 	while (running) {
 		Sleep(50);

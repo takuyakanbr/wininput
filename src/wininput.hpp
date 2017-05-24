@@ -11,7 +11,7 @@
 namespace input {
 
 	struct KeyData {
-		unsigned long vkCode = 0UL;
+		unsigned long code = 0UL;
 		bool ctrl = false;
 		bool shift = false;
 		bool alt = false;
@@ -22,7 +22,7 @@ namespace input {
 		unsigned code = 0;
 		long x = 0;
 		long y = 0;
-		unsigned long data = 0;
+		unsigned long param = 0;
 	};
 
 	// Defines the type of function to be passed into addKeyHandler.
@@ -65,22 +65,24 @@ namespace input {
 	// should also be matched, or false if otherwise.
 	// The list of KeyData should be terminated by a 'null' KeyData with vkCode of 0.
 	// Returns true if successful, and false if otherwise.
-	bool onKeyEvent(KeyData *data, bool strict, event_handler_fn fn, int *handlerId);
+	// The ID of the sequence will be written to sequenceId.
+	bool addKeySequence(KeyData *data, bool strict, event_handler_fn fn, int *sequenceId);
 
 	// Register an event_handler_fn that is called when the given sequence
 	// of mouse event(s) is observed. Tolerance determines the allowed
 	// deviation of the x and y coordinate from the values specified in data.
 	// The list of MouseData should be terminated by a 'null' MouseData with code of 0.
 	// Returns true if successful, and false if otherwise.
-	bool onMouseEvent(MouseData *data, unsigned tolerance, event_handler_fn fn, int *handlerId);
+	// The ID of the sequence will be written to sequenceId.
+	bool addMouseSequence(MouseData *data, unsigned tolerance, event_handler_fn fn, int *sequenceId);
 
-	// Remove the previously registered event handler that matches the given handlerId.
+	// Remove the previously registered sequence that matches the given sequenceId.
 	// Returns true if successful, and false if otherwise.
-	bool removeKeyEventHandler(int handlerId);
+	bool removeKeySequence(int sequenceId);
 
-	// Remove the previously registered event handler that matches the given handlerId.
+	// Remove the previously registered sequence that matches the given sequenceId.
 	// Returns true if successful, and false if otherwise.
-	bool removeMouseEventHandler(int handlerId);
+	bool removeMouseSequence(int sequenceId);
 
 	// Remove the keyboard and mouse hooks, and stops the internal message handling thread.
 	void shutdown();
