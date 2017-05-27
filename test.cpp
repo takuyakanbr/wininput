@@ -10,7 +10,8 @@
 namespace {
 	volatile int running = 1;
 
-	input::KeyData seq[6];
+	input::KeyData seq1[6];
+	input::KeyData seq2[6];
 
 	bool keyHandler(input::KeyData& data) {
 		if (data.type == INPUT_TYPE_KEYDOWN)
@@ -24,7 +25,12 @@ namespace {
 		return false;
 	}
 
-	bool seqMatchHandler() {
+	bool seq1MatchHandler() {
+		std::cout << "Ctrl+Shift+4 matched." << std::endl;
+		return false;
+	}
+
+	bool seq2MatchHandler() {
 		std::cout << "Hello matched." << std::endl;
 		return false;
 	}
@@ -45,13 +51,15 @@ int main() {
 	input::addKeyHandler(keyHandler);
 	input::addMouseHandler(mouseHandler);
 
-	seq[0] = { 0x48, false, true, false, 3 };
-	seq[1] = { 0x45, false, false, false, 3 };
-	seq[2] = { 0x4C, false, false, false, 3 };
-	seq[3] = { 0x4C, false, false, false, 3 };
-	seq[4] = { 0x4F, false, false, false, 3 };
+	seq1[0] = { 0x34, true, true, false, 3 }; // Ctrl+Shift+4
+	seq2[0] = { 0x48, false, true, false, 3 }; // Hello
+	seq2[1] = { 0x45, false, false, false, 3 };
+	seq2[2] = { 0x4C, false, false, false, 3 };
+	seq2[3] = { 0x4C, false, false, false, 3 };
+	seq2[4] = { 0x4F, false, false, false, 3 };
 	int seqId;
-	input::addKeySequence(seq, true, seqMatchHandler, &seqId);
+	input::addKeySequence(seq1, true, seq1MatchHandler, &seqId);
+	input::addKeySequence(seq2, true, seq2MatchHandler, &seqId);
 
 	while (running) {
 		Sleep(50);

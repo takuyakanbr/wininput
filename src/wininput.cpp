@@ -30,9 +30,6 @@ namespace {
 		input::event_handler_fn handler;
 	};
 
-	HHOOK keyboardHook = NULL;
-	HHOOK mouseHook = NULL;
-
 	HANDLE thread = NULL;
 	DWORD threadId = 0;
 	bool failure = false;
@@ -154,7 +151,9 @@ namespace {
 				input::KeyData data = { key->vkCode, ctrl != 0, shift != 0, alt != 0, type };
 
 				// sequences are only processed on key down
-				if (type == INPUT_TYPE_KEYDOWN) {
+				// ctrl, shift, alt not processed by sequences
+				if (type == INPUT_TYPE_KEYDOWN &&
+					!(data.code >= VK_LSHIFT && data.code <= VK_RMENU)) {
 					stop = checkKeyEventHandlers(data);
 					if (stop) return 1;
 				}
@@ -176,7 +175,6 @@ namespace {
 
 			if ((inf->flags >> LLMHF_INJECTED) & 1) {
 				// ignore injected events
-				std::cout << "inj " << wParam << std::endl;
 			} else {
 				input::MouseData data = { wParam, inf->pt.x, inf->pt.y, inf->mouseData };
 
@@ -197,8 +195,8 @@ namespace {
 	// the main function of the internal wininput thread
 	DWORD WINAPI _main(LPVOID lpParam) {
 		_D("WinInput thread started." << std::endl);
-		keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, lowLevelKeyboardProc, NULL, 0);
-		mouseHook = SetWindowsHookEx(WH_MOUSE_LL, lowLevelMouseProc, NULL, 0);
+		HHOOK keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, lowLevelKeyboardProc, NULL, 0);
+		HHOOK mouseHook = SetWindowsHookEx(WH_MOUSE_LL, lowLevelMouseProc, NULL, 0);
 
 		BOOL bRet;
 		MSG msg;
