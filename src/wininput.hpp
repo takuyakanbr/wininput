@@ -84,6 +84,11 @@ namespace input {
 	// Returns true if successful, and false if otherwise.
 	bool removeMouseSequence(int sequenceId);
 
+	// Sets whether the state of ctrl, shift, and alt should be internally tracked.
+	// This should be enabled if you are going to block those keys from reaching
+	// the OS inside your key handler function.
+	void trackModifierState(bool track);
+
 	// Remove the keyboard and mouse hooks, and stops the internal message handling thread.
 	void shutdown();
 

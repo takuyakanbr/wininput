@@ -44,6 +44,11 @@ namespace {
 	std::mutex mouseEventSeqsMutex;
 	int seqCounter = 0;
 
+	bool trackMods = false;
+	bool ctrlActive = false;
+	bool shiftActive = false;
+	bool altActive = false;
+
 	bool checkKeyHandlers(input::KeyData data) {
 		if (keyHandlers.size() == 0) return false;
 
@@ -62,10 +67,23 @@ namespace {
 		bool stop = false;
 		std::lock_guard<std::mutex> lock(keyEventSeqsMutex);
 		for (auto& seq : keyEventSeqs) {
-			input::KeyData& next = seq.evts[seq.pos];
+			bool matched = false;
 
-			if (data.code == next.code && (!seq.strict ||
-				(data.ctrl == next.ctrl && data.shift == next.shift && data.alt == next.alt))) {
+			input::KeyData* next = &seq.evts[seq.pos];
+			if (data.code == next->code && (!seq.strict ||
+				(data.ctrl == next->ctrl && data.shift == next->shift && data.alt == next->alt))) {
+				matched = true;
+
+			} else if (seq.pos != 0) {
+				seq.pos = 0;
+				next = &seq.evts[0];
+				if (data.code == next->code && (!seq.strict ||
+					(data.ctrl == next->ctrl && data.shift == next->shift && data.alt == next->alt))) {
+					matched = true;
+				}
+			}
+
+			if (matched) {
 				// increment pos on successful match
 				_D("Key Seq " << seq.id << " matched: " << data.code << std::endl);
 				++seq.pos;
@@ -76,10 +94,6 @@ namespace {
 					seq.pos = 0;
 					if (stop) break;
 				}
-
-			} else {
-				// reset pos on a failed match
-				seq.pos = 0;
 			}
 
 		}
@@ -104,11 +118,24 @@ namespace {
 		bool stop = false;
 		std::lock_guard<std::mutex> lock(mouseEventSeqsMutex);
 		for (auto& seq : mouseEventSeqs) {
-			input::MouseData& next = seq.evts[seq.pos];
-			int tol = (unsigned)seq.tolerance;
+			bool matched = false;
 
-			if (next.code == data.code && next.x >= data.x - tol && next.x <= data.x + tol &&
-				next.y >= data.y - tol && next.y <= data.y + tol) {
+			int tol = (unsigned)seq.tolerance;
+			input::MouseData* next = &seq.evts[seq.pos];
+			if (next->code == data.code && next->x >= data.x - tol && next->x <= data.x + tol &&
+				next->y >= data.y - tol && next->y <= data.y + tol) {
+				matched = true;
+
+			} else if (seq.pos != 0) {
+				seq.pos = 0;
+				next = &seq.evts[0];
+				if (next->code == data.code && next->x >= data.x - tol && next->x <= data.x + tol &&
+					next->y >= data.y - tol && next->y <= data.y + tol) {
+					matched = true;
+				}
+			}
+
+			if (matched) {
 				// increment pos on successful match
 				_D("Mouse Seq " << seq.id << " matched: " << data.code \
 					<< ", " << data.x << ", " << data.y << std::endl);
@@ -120,10 +147,6 @@ namespace {
 					seq.pos = 0;
 					if (stop) break;
 				}
-
-			} else {
-				// reset pos on a failed match
-				seq.pos = 0;
 			}
 		}
 		return stop;
@@ -139,16 +162,29 @@ namespace {
 			if ((key->flags >> LLKHF_INJECTED) & 1) {
 				// ignore injected events
 			} else {
-				// get current state of modifier keys
-				SHORT ctrl = GetAsyncKeyState(VK_CONTROL) >> (sizeof(SHORT) - 1);
-				SHORT shift = GetAsyncKeyState(VK_SHIFT) >> (sizeof(SHORT) - 1);
-				SHORT alt = GetAsyncKeyState(VK_MENU) >> (sizeof(SHORT) - 1);
-
 				short type = INPUT_TYPE_KEYUP;
 				if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
 					type = INPUT_TYPE_KEYDOWN;
 
-				input::KeyData data = { key->vkCode, ctrl != 0, shift != 0, alt != 0, type };
+				input::KeyData data;
+				if (trackMods) {
+					data = { key->vkCode, ctrlActive, shiftActive, altActive, type };
+
+					if (key->vkCode == VK_LCONTROL || key->vkCode == VK_RCONTROL)
+						ctrlActive = type == INPUT_TYPE_KEYDOWN;
+					else if (key->vkCode == VK_LSHIFT || key->vkCode == VK_RSHIFT)
+						shiftActive = type == INPUT_TYPE_KEYDOWN;
+					else if (key->vkCode == VK_LMENU || key->vkCode == VK_RMENU)
+						altActive = type == INPUT_TYPE_KEYDOWN;
+				} else {
+					SHORT ctrl = GetAsyncKeyState(VK_CONTROL) >> (sizeof(SHORT) - 1);
+					SHORT shift = GetAsyncKeyState(VK_SHIFT) >> (sizeof(SHORT) - 1);
+					SHORT alt = GetAsyncKeyState(VK_MENU) >> (sizeof(SHORT) - 1);
+					data = { key->vkCode, ctrl != 0, shift != 0, alt != 0, type };
+				}
+
+				_D(data.code << ", " << data.ctrl << ", " << data.shift << ", " <<\
+					data.alt << ", " << data.type << std::endl);
 
 				// sequences are only processed on key down
 				// ctrl, shift, alt not processed by sequences
@@ -309,6 +345,13 @@ namespace input {
 			}
 		}
 		return false;
+	}
+
+	void trackModifierState(bool track) {
+		trackMods = track;
+		ctrlActive = false;
+		shiftActive = false;
+		altActive = false;
 	}
 
 	void shutdown() {
